@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.IO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Hosting;
 using DailyProduction.Models;
 
 namespace IbasAPI.Controllers
@@ -12,56 +13,84 @@ namespace IbasAPI.Controllers
     [Route("[controller]")]
     public class DailyProductionController : ControllerBase
     {
-
-        private List<DailyProductionDTO> _productionRepo;
+        private readonly List<DailyProductionDTO> _productionRepo;
         private readonly ILogger<DailyProductionController> _logger;
 
-        public DailyProductionController(ILogger<DailyProductionController> logger)
+        public DailyProductionController(
+            ILogger<DailyProductionController> logger,
+            IConfiguration config,
+            IWebHostEnvironment env) // giver adgang til projektroden
         {
             _logger = logger;
-            _productionRepo = new List<DailyProductionDTO>
+
+            // Læs Environment fra config (Local / Azure)
+            var environment = config["Environment"] ?? "Local";
+
+            // Find sti fra appsettings.json
+            var csvPath = config[$"CsvFilePath:{environment}"];
+
+            // Hvis lokal → byg sti relativt til ContentRootPath (projektroden)
+            if (environment == "Local" && !Path.IsPathRooted(csvPath))
             {
-                new DailyProductionDTO {Date = new DateTime(2020, 1, 31), Model = BikeModel.IBv1, ItemsProduced = 12},
-                new DailyProductionDTO {Date = new DateTime(2020, 2, 28), Model = BikeModel.IBv1, ItemsProduced = 32},
-                new DailyProductionDTO {Date = new DateTime(2020, 3, 31), Model = BikeModel.IBv1, ItemsProduced = 32},
-                new DailyProductionDTO {Date = new DateTime(2020, 4, 30), Model = BikeModel.IBv1, ItemsProduced = 141},
-                new DailyProductionDTO {Date = new DateTime(2020, 5, 31), Model = BikeModel.IBv1, ItemsProduced = 146},
-                new DailyProductionDTO {Date = new DateTime(2020, 6, 30), Model = BikeModel.IBv1, ItemsProduced = 162},
-                new DailyProductionDTO {Date = new DateTime(2020, 7, 31), Model = BikeModel.IBv1, ItemsProduced = 102},
-                new DailyProductionDTO {Date = new DateTime(2020, 8, 31), Model = BikeModel.IBv1, ItemsProduced = 210},
-                new DailyProductionDTO {Date = new DateTime(2020, 9, 30), Model = BikeModel.IBv1, ItemsProduced = 144},
-                new DailyProductionDTO {Date = new DateTime(2020, 10, 31), Model = BikeModel.IBv1, ItemsProduced = 151},
-                new DailyProductionDTO {Date = new DateTime(2020, 11, 30), Model = BikeModel.IBv1, ItemsProduced = 61},
-                new DailyProductionDTO {Date = new DateTime(2020, 12, 31), Model = BikeModel.IBv1, ItemsProduced = 86},
+                csvPath = Path.Combine(env.ContentRootPath, csvPath);
+            }
 
-                new DailyProductionDTO {Date = new DateTime(2020, 1, 31), Model = BikeModel.evIB100, ItemsProduced = 1},
-                new DailyProductionDTO {Date = new DateTime(2020, 2, 28), Model = BikeModel.evIB100, ItemsProduced = 2},
-                new DailyProductionDTO {Date = new DateTime(2020, 3, 31), Model = BikeModel.evIB100, ItemsProduced = 3},
-                new DailyProductionDTO {Date = new DateTime(2020, 4, 30), Model = BikeModel.evIB100, ItemsProduced = 4},
-                new DailyProductionDTO {Date = new DateTime(2020, 5, 31), Model = BikeModel.evIB100, ItemsProduced = 4},
-                new DailyProductionDTO {Date = new DateTime(2020, 6, 30), Model = BikeModel.evIB100, ItemsProduced = 6},
-                new DailyProductionDTO {Date = new DateTime(2020, 7, 31), Model = BikeModel.evIB100, ItemsProduced = 10},
-                new DailyProductionDTO {Date = new DateTime(2020, 8, 31), Model = BikeModel.evIB100, ItemsProduced = 21},
-                new DailyProductionDTO {Date = new DateTime(2020, 9, 30), Model = BikeModel.evIB100, ItemsProduced = 17},
-                new DailyProductionDTO {Date = new DateTime(2020, 10, 31), Model = BikeModel.evIB100, ItemsProduced = 15},
-                new DailyProductionDTO {Date = new DateTime(2020, 11, 30), Model = BikeModel.evIB100, ItemsProduced = 25},
-                new DailyProductionDTO {Date = new DateTime(2020, 12, 31), Model = BikeModel.evIB100, ItemsProduced = 30},
+            _logger.LogInformation($"Using CSV path: {csvPath}");
 
-                new DailyProductionDTO {Date = new DateTime(2020, 1, 31), Model = BikeModel.evIB200, ItemsProduced = 10},
-                new DailyProductionDTO {Date = new DateTime(2020, 2, 28), Model = BikeModel.evIB200, ItemsProduced = 2},
-                new DailyProductionDTO {Date = new DateTime(2020, 3, 31), Model = BikeModel.evIB200, ItemsProduced = 32},
-                new DailyProductionDTO {Date = new DateTime(2020, 4, 30), Model = BikeModel.evIB200, ItemsProduced = 41},
-                new DailyProductionDTO {Date = new DateTime(2020, 5, 31), Model = BikeModel.evIB200, ItemsProduced = 46},
-                new DailyProductionDTO {Date = new DateTime(2020, 6, 30), Model = BikeModel.evIB200, ItemsProduced = 62},
-                new DailyProductionDTO {Date = new DateTime(2020, 7, 31), Model = BikeModel.evIB200, ItemsProduced = 102},
-                new DailyProductionDTO {Date = new DateTime(2020, 8, 31), Model = BikeModel.evIB200, ItemsProduced = 21},
-                new DailyProductionDTO {Date = new DateTime(2020, 9, 30), Model = BikeModel.evIB200, ItemsProduced = 44},
-                new DailyProductionDTO {Date = new DateTime(2020, 10, 31), Model = BikeModel.evIB200, ItemsProduced = 51},
-                new DailyProductionDTO {Date = new DateTime(2020, 11, 30), Model = BikeModel.evIB200, ItemsProduced = 61},
-                new DailyProductionDTO {Date = new DateTime(2020, 12, 31), Model = BikeModel.evIB200, ItemsProduced = 88}
-            };
+            _productionRepo = LoadProductionDataFromCsv(csvPath);
         }
-        
+
+        private List<DailyProductionDTO> LoadProductionDataFromCsv(string filePath)
+        {
+            var productionList = new List<DailyProductionDTO>();
+
+            try
+            {
+                if (!System.IO.File.Exists(filePath))
+                {
+                    _logger.LogError($"CSV file not found: {filePath}");
+                    return productionList;
+                }
+
+                var lines = System.IO.File.ReadAllLines(filePath);
+
+                // Skip header
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var columns = lines[i].Split(',');
+
+                    if (columns.Length >= 4 &&
+                        int.TryParse(columns[0], out int partitionKey) &&
+                        DateTime.TryParse(columns[1], out DateTime date) &&
+                        int.TryParse(columns[3], out int itemsProduced))
+                    {
+                        BikeModel model = partitionKey switch
+                        {
+                            1 => BikeModel.IBv1,
+                            2 => BikeModel.evIB100,
+                            3 => BikeModel.evIB200,
+                            _ => BikeModel.undefined
+                        };
+
+                        productionList.Add(new DailyProductionDTO
+                        {
+                            Date = date,
+                            Model = model,
+                            ItemsProduced = itemsProduced
+                        });
+                    }
+                }
+
+                _logger.LogInformation($"Loaded {productionList.Count} production records from CSV");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading production data from CSV");
+            }
+
+            return productionList;
+        }
+
         [HttpGet]
         public IEnumerable<DailyProductionDTO> Get()
         {
